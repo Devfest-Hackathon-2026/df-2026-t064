@@ -1,34 +1,12 @@
-# 秘密情報（コミットしない）
-.env
-.env.*
-!.env.example
-.dev.vars
-.dev.vars.*
-!.dev.vars.example
-*.pem
-*.key
-*.p12
-service-account*.json
-credentials*.json
-google-services.json
-GoogleService-Info.plist
-
-# 依存関係とビルドの成果物
 node_modules/
-dist/
-build/
-out/
 .next/
-.wrangler/
-__pycache__/
-*.pyc
-.venv/
-venv/
-
-# OS とエディタ
-.DS_Store
-Thumbs.db
-.idea/
-.vscode/*
-!.vscode/extensions.json
-*.log
+out/
+.env*
+public/data/grids/
+# 日本郵便のローマ字住所データ（scripts/add-english-address.ts で使う。ダウンロード先はスクリプトの先頭に書いてある）
+data/ken_all_rome/
+public/data/grids-002/
+public/data/grids-005/
+# Firebase CLI のキャッシュとログ
+.firebase/
+firebase-debug.log
