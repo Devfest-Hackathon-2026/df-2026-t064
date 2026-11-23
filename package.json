@@ -1,8 +1,7 @@
 {
   "scripts": {
-    "data": "npm run data:convert && npm run data:address && npm run data:split",
+    "data": "npm run data:convert && npm run data:split",
     "data:convert": "tsx scripts/convert-shelters.ts",
-    "data:address": "tsx scripts/add-english-address.ts",
     "data:split": "tsx scripts/split-shelters.ts",
     "dev": "next dev",
     "build": "next build",
@@ -24,9 +23,6 @@
     "@types/papaparse": "^5.5.2",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
-    "iconv-lite": "^0.7.3",
-    "kuroshiro": "^1.2.1",
-    "kuroshiro-analyzer-kuromoji": "^1.1.0",
     "postcss": "^8.5.32",
     "tailwindcss": "^4.3.4",
     "tsx": "^4.23.15",

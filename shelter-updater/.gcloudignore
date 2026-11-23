@@ -1,0 +1,11 @@
+.gcloudignore
+.git/
+.venv/
+__pycache__/
+*.pyc
+
+data/staging/
+data/backups/
+data/cloud-backups/
+data/public-backups/
+data/apply-test/

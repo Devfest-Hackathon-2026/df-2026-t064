@@ -3,10 +3,25 @@ node_modules/
 out/
 .env*
 public/data/grids/
-# 日本郵便のローマ字住所データ（scripts/add-english-address.ts で使う。ダウンロード先はスクリプトの先頭に書いてある）
-data/ken_all_rome/
 public/data/grids-002/
 public/data/grids-005/
 # Firebase CLI のキャッシュとログ
 .firebase/
 firebase-debug.log
+# Python
+__pycache__/
+*.pyc
+
+# Shelter updater temporary files
+shelter-updater/data/staging/
+shelter-updater/data/backups/
+shelter-updater/data/apply-test/
+shelter-updater/data/public-backups/
+
+# Test files
+shelter-updater/data/*-test.csv
+shelter-updater/data/*-test.json
+shelter-updater/data/*-rollback-test.csv
+shelter-updater/data/*-rollback-test.json
+shelter-updater/data/*-before-rollback.json
+shelter-updater/data/cloud-backups/

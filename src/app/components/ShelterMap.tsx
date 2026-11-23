@@ -1,34 +1,26 @@
 /// <reference types="google.maps" />
 "use client"
 
-import { useState, useEffect, useRef} from "react"
+import { useState, useEffect, useRef, type ReactNode } from "react"
 import { createPortal, flushSync } from "react-dom"
 import { useBottomSheet, SHEET_MIN } from "../hooks/useBottomSheet";
-import { setOptions, importLibrary } from "@googlemaps/js-api-loader"
+import { importLibrary } from "@googlemaps/js-api-loader"
 import { findNearbyShelters } from "../../lib/nearby-shelters";
 import { calculateDistance } from "../../lib/distance";
 import type { NearbyShelter } from "../../lib/nearby-shelters";
 import type { HazardKey } from "../../lib/shelters";
+import { ensureMapsOptions, getLoadedMapsLanguage } from "../../lib/google-maps";
+import { HAZARD_KEYS } from "../../lib/hazards";
+import { createShelterMarkerIcon } from "../../lib/shelter-marker-icon";
 import { ShelterCard } from "./ShelterCard";
+import { HazardFilter } from "./HazardFilter";
 import { useLanguage, readSavedLocale } from "../../i18n/LanguageProvider";
-import { DEFAULT_LOCALE, type Locale } from "../../i18n/dictionaries";
-
-let loadedLanguage: Locale | null = null;
-
-function ensureMapsOptions() {
-    if (loadedLanguage) return;
-    const language = readSavedLocale() ?? DEFAULT_LOCALE;
-    setOptions({
-        key: process.env.NEXT_PUBLIC_GOOGLE_MAP_API_KEY!,
-        v: "weekly",
-        language,
-        region: "JP",
-    });
-    loadedLanguage = language;
-}
 
 type Props = {
     center: {lat: number, lng: number}
+    centerLabel?: string
+    topOverlay?: ReactNode
+    useCenterAsRouteOrigin?: boolean
 };
 
 const SEARCH_RADIUS = 500;
@@ -42,7 +34,8 @@ type ShelterMarker = {
     shelter: NearbyShelter;
 };
 
-export function ShelterMap({ center }: Props){
+export function ShelterMap({ center, centerLabel, topOverlay, useCenterAsRouteOrigin = false }: Props){
+    const routeOrigin = useCenterAsRouteOrigin ? center : undefined;
     const mapRef = useRef<HTMLDivElement>(null);
     const [shelters, setShelters] = useState<NearbyShelter[]>([]);
     const [fetchFailed, setFetchFailed] = useState(false);
@@ -57,6 +50,10 @@ export function ShelterMap({ center }: Props){
     };
     const visibleShelters = shelters.filter((s) => matchesHazard(s, activeHazard));
 
+    const hazardCounts = Object.fromEntries(
+        HAZARD_KEYS.map((key) => [key, shelters.filter((s) => matchesHazard(s, key)).length]),
+    ) as Record<HazardKey, number>;
+
     const mapInstanceRef = useRef<google.maps.Map | null>(null);
     const infoWindowRef = useRef<google.maps.InfoWindow | null>(null);
     const markersRef = useRef(new Map<string, ShelterMarker>());
@@ -66,21 +63,18 @@ export function ShelterMap({ center }: Props){
         activeHazardRef.current = activeHazard;
         const map = mapInstanceRef.current;
         if (!map) return;
+        if (activeHazard !== null) {
+            infoWindowRef.current?.close();
+            setSelectedShelter(null);
+        }
 
         for (const { marker, shelter } of markersRef.current.values()) {
             marker.map = matchesHazard(shelter, activeHazard) ? map : null;
         }
-
-        setSelectedShelter((selected) => {
-            if (selected && !matchesHazard(selected, activeHazard)) {
-                infoWindowRef.current?.close();
-                return null;
-            }
-            return selected;
-        });
     }, [activeHazard]);
 
     useEffect(() => {
+        const loadedLanguage = getLoadedMapsLanguage();
         if (!loadedLanguage || locale === loadedLanguage) return;
         if (readSavedLocale() !== locale) return;
         window.location.reload();
@@ -127,9 +121,14 @@ export function ShelterMap({ center }: Props){
 
             mapInstanceRef.current = map;
 
-            const infoWindow = new InfoWindow({ maxWidth: 360 });
+            const infoWindow = new InfoWindow();
             infoWindowRef.current = infoWindow;
             infoWindow.addListener("closeclick", () => setSelectedShelter(null));
+
+            map.addListener("click", () => {
+                infoWindow.close();
+                setSelectedShelter(null);
+            });
 
             const currentPin = new PinElement({
                 background: "#2563eb",
@@ -139,7 +138,7 @@ export function ShelterMap({ center }: Props){
             new AdvancedMarkerElement({
                 map,
                 position: center,
-                title: t.currentLocation,
+                title: centerLabel ?? t.currentLocation,
                 content: currentPin.element,
             })
 
@@ -160,11 +159,14 @@ export function ShelterMap({ center }: Props){
                         map: matchesHazard(shelter, activeHazardRef.current) ? map : null,
                         position: {lat: shelter.lat, lng:shelter.lng},
                         title: shelter.name,
+                        content: createShelterMarkerIcon(),
                     });
                     markersRef.current.set(shelter.id, { marker, shelter });
 
                     marker.addListener('click', () => {
                         flushSync(() => setSelectedShelter(shelter));
+                        const width = Math.round(Math.min(window.innerWidth * 0.8, 400));
+                        infoWindow.setOptions({ minWidth: width, maxWidth: width });
                         infoWindow.setContent(content);
                         infoWindow.open({ map, anchor: marker });
                     });
@@ -203,6 +205,28 @@ export function ShelterMap({ center }: Props){
                 style={{ bottom: `${SHEET_MIN}%` }}
             />
 
+            {topOverlay && (
+                <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex justify-center pt-3">
+                    <div className="pointer-events-auto">{topOverlay}</div>
+                </div>
+            )}
+
+            {!sheet.isTop && (
+                <div
+                    className={`pointer-events-none absolute inset-x-0 z-10 flex justify-center pb-3 ${
+                        sheet.isDragging ? "" : "transition-[bottom] duration-300 ease-out"
+                    }`}
+                    style={{ bottom: `${sheet.height}%` }}
+                >
+                    <HazardFilter
+                        activeHazard={activeHazard}
+                        counts={hazardCounts}
+                        total={shelters.length}
+                        onChange={setActiveHazard}
+                    />
+                </div>
+            )}
+
             {infoContent && selectedShelter && createPortal(
                 <ShelterCard
                     compact
@@ -210,6 +234,7 @@ export function ShelterMap({ center }: Props){
                     distance={calculateDistance(center.lat, center.lng, selectedShelter.lat, selectedShelter.lng)}
                     activeHazard={activeHazard}
                     onHazardClick={toggleHazard}
+                    routeOrigin={routeOrigin}
                 />,
                 infoContent,
             )}
@@ -276,6 +301,7 @@ export function ShelterMap({ center }: Props){
                                 distance={calculateDistance(center.lat, center.lng, shelter.lat, shelter.lng)}
                                 activeHazard={activeHazard}
                                 onHazardClick={toggleHazard}
+                                routeOrigin={routeOrigin}
                             />
                         ))}
                     </div>

@@ -6,9 +6,6 @@ export type Shelter = {
   id: string;
   name: string;
   address: string;
-  // 英語の住所（例: "1-1-1 Momijidainishi, Atsubetsu-ku, Sapporo-shi, Hokkaido"）
-  // scripts/add-english-address.ts で追加する。変換できなかったときは無い
-  addressEn?: string;
   lat: number;
   lng: number;
   hazards: {

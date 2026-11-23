@@ -31,12 +31,16 @@ export function getNearbyGridIds(
 
 const gridCache = new Map<string, Promise<Shelter[]>>();
 
-async function fetchGrid(id: string): Promise<Shelter[]> {
-  const response = await fetch(`/data/grids/${id}.json`);
+const USE_CLOUD = true; // falseはローカルのJSON、trueならCloud Storageを使う
 
-  if (response.status === 404) {
-    return [];
-  }
+async function fetchGrid(id: string): Promise<Shelter[]> {
+  const baseUrl = USE_CLOUD
+    ? "https://storage.googleapis.com/hinanjo-grids-001/grids"
+    : "/data/grids";
+
+  const response = await fetch(`${baseUrl}/${id}.json`);
+
+  if (response.status === 404) return [];
 
   if (!response.ok) {
     throw new Error(`グリッド取得失敗: ${id} (${response.status})`);

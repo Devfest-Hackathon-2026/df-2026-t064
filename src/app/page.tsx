@@ -1,33 +1,30 @@
 "use client";
 
 import { useCurrentPosition } from "./hooks/useCurrentPosition";
+import { useManualLocation } from "./hooks/useManualLocation";
 import { ShelterMap } from "./components/ShelterMap";
+import { LocationFallback } from "./components/location/LocationFallback";
+import { ChangeLocationButton } from "./components/location/ChangeLocationButton";
 import { useLanguage } from "../i18n/LanguageProvider";
 
 export default function Home() {
   const { t } = useLanguage();
   const { position, error, retry } = useCurrentPosition();
+  const [manualLocation, setManualLocation] = useManualLocation();
 
   return (
     <main className="relative min-h-0 flex-1">
-      {position ? (
+      {manualLocation ? (
+        <ShelterMap
+          center={manualLocation.position}
+          centerLabel={t.manual.selectedLocation}
+          useCenterAsRouteOrigin={!position}
+          topOverlay={<ChangeLocationButton onClick={() => setManualLocation(null)} />}
+        />
+      ) : position ? (
         <ShelterMap center={position} />
       ) : error ? (
-        <div
-          role="alert"
-          className="flex h-full flex-col items-center justify-center gap-4 p-6 text-center"
-        >
-          <p className="max-w-md text-slate-700">{t.locationErrors[error]}</p>
-          {error !== "unsupported" && (
-            <button
-              type="button"
-              onClick={retry}
-              className="rounded-full bg-slate-800 px-5 py-2 text-sm font-semibold text-white hover:bg-slate-700"
-            >
-              {t.retry}
-            </button>
-          )}
-        </div>
+        <LocationFallback error={error} onRetry={retry} onSelect={setManualLocation} />
       ) : (
         <div
           role="status"
